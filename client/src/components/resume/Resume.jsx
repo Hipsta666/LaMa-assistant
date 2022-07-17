@@ -18,7 +18,6 @@ import CancelPresentationIcon from '@mui/icons-material/CancelPresentation';
 import ScreenSearchDesktopIcon from '@mui/icons-material/ScreenSearchDesktop';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import SelectList from '../SelectList/SelectList';
-
 import classes from './Resume.module.css';
 import Role from '../Role/Role';
 import Skill from '../Skill/Skill';
@@ -314,7 +313,7 @@ const Resume = ({ resume, onEditResume, professionalRoles, areas }) => {
 									'.css-9ddj71-MuiInputBase-root-MuiOutlinedInput-root': { height: 47 },
 								}}>
 								<div className={classes.salary}>
-									<TextField id='salary' type='number' label='Зарплата' value={initialValues.salary} onChange={(e) => handleChange(e)} />
+									<TextField id='salary' type='Number' label='Зарплата' autoComplete='off' value={initialValues.salary} onChange={(e) => handleChange(e)} />
 									<TextField id='currency' sx={{ '.MuiInputBase-input': { pt: '11px', pb: '11px' } }} select value={currency} onChange={(e) => handleChangeCurrency(e)}>
 										{currencies.map((option) => (
 											<MenuItem key={option.value} value={option.value}>
@@ -559,7 +558,7 @@ const Resume = ({ resume, onEditResume, professionalRoles, areas }) => {
 											value={description}
 											label='Описание'
 											placeholder='Напишитео себе'
-											maxRows={5}
+											maxRows={4}
 											multiline
 											onChange={(e) => handleChangeDescription(e)}
 										/>

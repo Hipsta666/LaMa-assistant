@@ -1,48 +1,35 @@
-import threading
-from parse_hh_data import download, parse
+from base64 import decode
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import json
-import codecs
 import requests
 import time
+import string
+import requests
 from bs4 import BeautifulSoup
 from random_user_agent.user_agent import UserAgent
 from random_user_agent.params import SoftwareName, OperatingSystem
-import time
 from threading import *
-import multiprocessing
-
 from bs4 import BeautifulSoup
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import SnowballStemmer
-import string
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.feature_extraction.text import CountVectorizer
-import numpy as np
-import time
-import requests
-import threading
-import nltk
-
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy import spatial
 from sklearn.preprocessing import normalize
 from string import digits
 
-
-import json
 with open("/Users/hipsta/Desktop/MyDevelop/LaMa-Assistant/server/dict.json", "r",  encoding="utf-8") as f:
         dictionary = json.load(f)
 
-# nltk.download('stopwords')
-# nltk.download('punkt')
+
 stop_words = stopwords.words('russian')
 stemmer = SnowballStemmer(language='russian')
 punct = string.punctuation.replace("#", "") + '—' + '”' + '“' + '``' + '«' + '»' + '•' + '/' + ' '
-headersForVacancy = {'Authorization': 'Bearer JAT2ON2VA8O2CI8R188N9MGLUSUCNACI2C0BISROPHR5O1KCIB4IKAJ5FLBT91UK'}
-headersForResume = {'Authorization': 'Bearer T8ON34F73LE1D7SQN41D0I009LU1TC69MGCKSM305SRPD6ETSVONFN9SAB90JAQM'}
+headersForVacancy = {'Authorization': 'Bearer T9OA190MTJQUB7JHJQI8V60HVJ1P856NFISMFLT13H6RNQA0TNUJTEGOUQQMJGEK'}
+headersForResume = {'Authorization': 'Bearer G21MT8RCU6KUP9PD5A2VTT1D2C69232K9T8G7S92M0Q93PM40K7C1MGBA8GQB9BP'}
 
 SOFTWARE_NAMES = [SoftwareName.CHROME.value]
 OPERATING_SYSTEMS = [OperatingSystem.WINDOWS.value, OperatingSystem.LINUX.value]
@@ -111,17 +98,16 @@ def get_key_skills_rate(resumeSkills, vacancySkills):
     for skill in vacancySkills:
         
         vacancySkillsList.append(skill.lower().translate(remove_digit).translate(remove_punct))
-
+    
     for i in resumeSkillsList:
         if i in vacancySkillsList:
             counter += 1
-    
     if vacancySkillsList:
         rate = (1/len(vacancySkillsList)*counter)/2
     else:
         rate = 0
     if rate > 0.5:
-        return 0.5
+        rate = 0.5
     return rate
 
 def getVacanciesByParams(searchParams, page):
@@ -133,7 +119,8 @@ def getVacanciesByParams(searchParams, page):
     experience = '&experience=' + searchParams["experience"] if searchParams['toggleExperience'] else ''
 
     response = requests.get(f'https://api.hh.ru/vacancies/?area={searchParams["area"]}&period={searchParams["period"]}&per_page={searchParams["per_page"]}&responses_count_enabled={searchParams["responses_count_enabled"]}&page={page}{"".join(searchParams["professional_role"])}{onlyWithSalary}{salary}{experience}&premium=true{"".join(searchParams["employment"])}{text}&currency={searchParams["currency"]}', headers=headersForVacancy)
-    print(response.url)
+    # print(response)
+    # print(response.json())
     return response.json()
 
 def getVacancy(vacancyPreview, items, vacanciesPreview, resumeVector, resumeKeySkills):
@@ -153,35 +140,37 @@ def getVacancy(vacancyPreview, items, vacanciesPreview, resumeVector, resumeKeyS
     vacancy['currentRate'] = 0
     items.append(vacancy)
     vacancyPreview['experience'] = vacancy['experience']
+    vacancyPreview['fullDescription'] = vacancy['description']
+    vacancyPreview['keySkills'] = vacancy['key_skills']
+    vacancyPreview['employment'] = vacancy['employment']
 
-
-    
     vacancyKeySkills = [skill['name'] for skill in vacancy['key_skills']]
-    keySkillsRate = get_key_skills_rate(vacancyKeySkills, resumeKeySkills)
+    keySkillsRate = get_key_skills_rate(resumeKeySkills, vacancyKeySkills)
     vacancyDescriptionRate = get_cosine_similarity(get_vacancy_vector(vacancy), resumeVector)
-    print(vacancyDescriptionRate, keySkillsRate)
     if vacancyDescriptionRate > 0.5:
         vacancyDescriptionRate = 0.5
     
     vacancyPreview['rate'] = round(vacancyDescriptionRate + keySkillsRate, 2)
     vacanciesPreview.append(vacancyPreview)
 
-   
-
 def getVacanciesByPage(searchParams, page, items, vacanciesPreview, resumeVector, resumeKeySkills):
     thread_pool = []
     vacanciesByParams = getVacanciesByParams(searchParams, page)
-    for vacancyPreview in vacanciesByParams['items']:
-        thread = Thread(target=getVacancy, args=(vacancyPreview, items, vacanciesPreview, resumeVector,resumeKeySkills ))
-        thread_pool.append(thread)
-        thread.start()
-        lock.acquire()
+    if 'errors' not in vacanciesByParams:
+        for vacancyPreview in vacanciesByParams['items']:
+            thread = Thread(target=getVacancy, args=(vacancyPreview, items, vacanciesPreview, resumeVector,resumeKeySkills ))
+            thread_pool.append(thread)
+            thread.start()
+            lock.acquire()
 
 
-    for thread in thread_pool:
-        thread.join()
-    lock.release()
-    return items, vacanciesPreview
+        for thread in thread_pool:
+            thread.join()
+        lock.release()
+        return items, vacanciesPreview
+    else:
+        print('errors')
+        return []
 
 def getAreaId(resumeArea):
     defaultArea = 4
@@ -198,7 +187,10 @@ def getAreaId(resumeArea):
         return defaultArea
 
 def getExperience(resume):
-    years = int(resume['total_experience']['months']) / 12 if resume['total_experience']['months'] else 1
+    if (resume['total_experience'] != None) and ('month' in resume['total_experience']): 
+        years = int(resume['total_experience']['months']) / 12 if resume['total_experience']['months'] else 1
+    else: 
+        years = 0.5
     if years < 1:
         return 'noExperience', 'Нет опыта'
     elif 1 <= years < 3:
@@ -210,6 +202,7 @@ def getExperience(resume):
 
 def getResume(id):
     resumeResponse = requests.get('https://api.hh.ru/resumes/' + id, headers=headersForResume)
+
     if resumeResponse.status_code == 200:
         return resumeResponse.json()
     else:
@@ -228,7 +221,7 @@ def getVacancies(resume):
             'no_magic':'true',
             'professional_role': ['&professional_role=' + item['id'] for item in resume['professional_roles']],
             'period': 30,
-            'per_page': 10,
+            'per_page': 50,
             'experience': resume['total_experience'],
             'salary': resume['salary']['amount'],
             'only_with_salary': 'true',
@@ -240,7 +233,7 @@ def getVacancies(resume):
             'currency' : resume['salary']['currency']
         }
 
-    for page in range(1):
+    for page in range(2):
         thread = Thread(target=getVacanciesByPage, args=(searchParams, page, items, vacanciesPreview, resumeVector, resumeKeySkills))
         thread_pool.append(thread)
         thread.start()
@@ -249,24 +242,30 @@ def getVacancies(resume):
 
     for thread in thread_pool:
         thread.join()
-
+    
     return (items, vacanciesPreview)
-
 
 
 app = Flask(__name__, static_url_path='')  
 CORS(app)
-@app.route('/')  
-def home():
-    return app.send_static_file('index.html')  
 
+
+@app.route('/items/rolesandareas', methods=['GET'])  
+def getAreasAndRoles():
+
+    with open("/Users/hipsta/Desktop/MyDevelop/LaMa-Assistant/server/roles.json", "r",  encoding="utf-8") as f:
+        roles = json.load(f)        
+
+    with open("/Users/hipsta/Desktop/MyDevelop/LaMa-Assistant/server/areas.json", "r",  encoding="utf-8") as f:
+        areas = json.load(f)      
+  
+    return jsonify({'categories': roles['categories'] , 'areas': areas['areas']})
 
 
 @app.route('/items/<string:resumeId>', methods=['GET'])  
 def getItems(resumeId):
     t = time.time()
     resume = getResume(resumeId)        
-    
     if resume:
         if not resume['salary']:
             resume['salary'] = {'amount': '', 'currency' : 'RUR'}
@@ -276,9 +275,9 @@ def getItems(resumeId):
         resume['toggleTitle'] = True
         resume['total_experience'] = getExperience(resume)[0]
         (vacancies, vacanciesPreview) = getVacancies(resume)
-        print(vacanciesPreview)
-        print(time.time()- t)
-        
+
+        r = jsonify({'items': sorted(vacanciesPreview, key=lambda k: k['rate'], reverse=True) , 'resume': resume})
+  
         return jsonify({'items': sorted(vacanciesPreview, key=lambda k: k['rate'], reverse=True) , 'resume': resume})
 
     else:
@@ -294,10 +293,8 @@ def getItemsAfterEdit():
     if resume:
         if not resume['salary']:
             resume['salary'] = {'amount': '', 'currency' : 'RUR'}
-        print(resume['professional_roles'])
         if values['professionalRole']:
             resume['professional_roles'] = values['professionalRole']
-        print(values['professionalRole'])
         resume['area']['name'] = values['area']['name']
         resume['salary']['amount'] = values['salary']
         resume['skills'] = values['description']
@@ -309,28 +306,40 @@ def getItemsAfterEdit():
         resume['toggleTitle'] = values['toggleTitle']
         resume['skill_set'] = values['skillSet']
         resume['salary']['currency'] = values['currency']
-       
+        
         
         (vacancies, vacanciesPreview) = getVacancies(resume)
-        print(time.time()- t)
 
         return jsonify({'items': sorted(vacanciesPreview, key=lambda k: k['rate'], reverse=True), 'resume': resume})
         
     else:
         return jsonify({'items': {}, 'resume': {}})
-
+# export NODE_OPTIONS=--openssl-legacy-provider
+# import requests
 # response = requests.post('https://hh.ru/oauth/token', data={'client_secret':'SEJEQ0GVK6I7PLJCHC7VIFFIMIDLPM1KECK4UP315NU3I7MLKFCVK84SQEDLGEC0', 'client_id': 'RDT0RFJHJ50AEQQP8MJ49JB8KE0S9S58NVDMB3JHGG1815445RATC9RDL44K2E70', 'grant_type':'client_credentials'})
 # print(response.text)
+# {"access_token": "T9OA190MTJQUB7JHJQI8V60HVJ1P856NFISMFLT13H6RNQA0TNUJTEGOUQQMJGEK", "token_type": "bearer"}
+
+# Получение токена резюме - перейти по адресу https://hh.ru/oauth/authorize?response_type=code&client_id=RDT0RFJHJ50AEQQP8MJ49JB8KE0S9S58NVDMB3JHGG1815445RATC9RDL44K2E70
+# Получаем в url code=TL1KMTLE8417CF66JQES7RL54LKPHEM82F884CPA0S0VO8PNPRPVG9F9LAM1CUHM
 # import requests
-# response = requests.get('https://api.hh.ru/me', headers={'content-type': 'application/json', 'Authorization': 'Bearer T8ON34F73LE1D7SQN41D0I009LU1TC69MGCKSM305SRPD6ETSVONFN9SAB90JAQM'})
+# response = requests.post('https://hh.ru/oauth/token', data={'client_secret':'SEJEQ0GVK6I7PLJCHC7VIFFIMIDLPM1KECK4UP315NU3I7MLKFCVK84SQEDLGEC0', 'client_id': 'RDT0RFJHJ50AEQQP8MJ49JB8KE0S9S58NVDMB3JHGG1815445RATC9RDL44K2E70', 'grant_type':'authorization_code', 'code': 'TL1KMTLE8417CF66JQES7RL54LKPHEM82F884CPA0S0VO8PNPRPVG9F9LAM1CUHM'})
 # print(response.text)
+
+# {"access_token": "G21MT8RCU6KUP9PD5A2VTT1D2C69232K9T8G7S92M0Q93PM40K7C1MGBA8GQB9BP", "token_type": "bearer", "refresh_token": "K1CU8M266AA8QHAFF0T5UHPGTQ04AR95N8ORTCPCGKUCB4SK4RB6G7F28GV73EL2", "expires_in": 1209599}
+
+# Проверка токена 
+# import requests
+# response = requests.get('https://api.hh.ru/me', headers={'content-type': 'application/json', 'Authorization': 'Bearer JBUDRTVE1KO69Q517Q8I3BPBGS5JF1FNNHFJBSRKU75DIRC97GF59QESGNFL4ST2'})
+# print(response.text)
+# {"auth_type":"applicant","is_applicant":true,"is_employer":false,"is_admin":false,"is_application":false,"id":"96300944","is_anonymous":false,"email":"andrewhipsta@gmail.com","first_name":"Andrey","middle_name":null,"last_name":"Ovechkin","resumes_url":"https://api.hh.ru/resumes/mine","negotiations_url":"https://api.hh.ru/negotiations","is_in_search":true,"mid_name":null,"employer":null,"personal_manager":null,"manager":null,"phone":"79994624536","counters":{"new_resume_views":13,"unread_negotiations":0,"resumes_count":1}}
 # headersForVacancy = {'Authorization': 'Bearer JAT2ON2VA8O2CI8R188N9MGLUSUCNACI2C0BISROPHR5O1KCIB4IKAJ5FLBT91UK'}
 # headersForResume = {'Authorization': 'Bearer T8ON34F73LE1D7SQN41D0I009LU1TC69MGCKSM305SRPD6ETSVONFN9SAB90JAQM'}
 # resumeResponse = requests.get('https://api.hh.ru/resumes/dbbe6550ff09036b230039ed1f6d7954346563', headers=headersForResume)
     
 # print(resumeResponse)
 if __name__ == '__main__':  
-    app.run()
+    app.run(port=5001)
 
 # {"access_token": "JAT2ON2VA8O2CI8R188N9MGLUSUCNACI2C0BISROPHR5O1KCIB4IKAJ5FLBT91UK", "token_type": "bearer"}
 # 'Руководитель: IT, информационная и общая безопасность

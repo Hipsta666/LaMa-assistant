@@ -1,155 +1,159 @@
 /* eslint-disable no-nested-ternary */
-import React, { useState, useCallback } from 'react';
-import './App.css';
-import Typed from 'typed.js';
-import Box from '@mui/material/Box';
-import Button from '@mui/material/Button';
-import TextField from '@mui/material/TextField';
-import MenuBookSharpIcon from '@mui/icons-material/MenuBookSharp';
-import EditSharpIcon from '@mui/icons-material/EditSharp';
-import WorkSharpIcon from '@mui/icons-material/WorkSharp';
-import LinkIcon from '@mui/icons-material/Link';
-import LinkOffIcon from '@mui/icons-material/LinkOff';
-import Resume from './components/resume/Resume';
-import Vacancies from './components/vacancies/Vacancies';
+import React, { useState, useCallback } from 'react'
+import './App.css'
+import Typed from 'typed.js'
+import Box from '@mui/material/Box'
+import Button from '@mui/material/Button'
+import TextField from '@mui/material/TextField'
+import MenuBookSharpIcon from '@mui/icons-material/MenuBookSharp'
+import EditSharpIcon from '@mui/icons-material/EditSharp'
+import WorkSharpIcon from '@mui/icons-material/WorkSharp'
+import LinkIcon from '@mui/icons-material/Link'
+import LinkOffIcon from '@mui/icons-material/LinkOff'
+import Resume from './components/resume/Resume'
+import Vacancies from './components/vacancies/Vacancies'
 
 const welcomeOptions = {
-	strings: ['', 'Я удобный', 'Я умный', 'Я лучший...', 'Я нуждаюсь только в твоем резюме^2000.'],
+	strings: ['', 'Я удобный', 'Я умный', 'Я лучший...', 'Я нуждаюсь только в твоём резюме^2000.'],
 	typeSpeed: 60,
 	backSpeed: 60,
 	backDelay: 1000,
 	showCursor: true,
 	fadeOutDelay: 1000,
-};
+}
 
-const isEmpty = (obj) => Object.keys(obj).length === 0;
+const isEmpty = (obj) => Object.keys(obj).length === 0
 
 const useRequest = (request) => {
 	const [state, setState] = useState({
 		loading: false,
 		data: null,
 		error: null,
-	});
+	})
 	const callRequest = useCallback(
 		async (...value) => {
-			setState({ loading: true, data: null, error: null });
+			setState({ loading: true, data: null, error: null })
 			try {
-				const response = await request(...value);
-				const data = await response.json();
-				setState({ loading: false, data, error: null });
+				const response = await request(...value)
+				// console.log(request, value, response);
+				const data = await response.json()
+				// console.log(data, 12312312);
+				setState({ loading: false, data, error: null })
 			} catch (error) {
-				setState({ loading: false, data: null, error });
+				setState({ loading: false, data: null, error })
 			}
 		},
 		[request]
-	);
-	return { ...state, callRequest };
-};
+	)
+	return { ...state, callRequest }
+}
+// https://api.hh.ru/resumes/items/
+// https://lamainfoapi.herokuapp.com/items/edit
+// https://lamainfoapi.herokuapp.com/items/${resumeId}
 
 const mutateResume = (resume, values) =>
-	fetch(`https://lamainfoapi.herokuapp.com/items/edit`, {
+	fetch(`http://127.0.0.1:5001/items/edit`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json;charset=utf-8',
 		},
 		body: JSON.stringify({ resume, values }),
-	});
+	})
 
 const queryResume = (resumeId) =>
-	fetch(`https://lamainfoapi.herokuapp.com/items/${resumeId}`, {
+	fetch(`http://127.0.0.1:5001/items/${resumeId}`, {
 		headers: {
 			resumeId,
 		},
-	});
+	})
 
-let loaderCouner = 0;
-let exeptionCouner = 0;
+let loaderCouner = 0
+let exeptionCouner = 0
 
 function App() {
-	const [input, setInput] = useState('');
-	const getItems = useRequest(queryResume);
-	const editResume = useRequest(mutateResume);
+	const [input, setInput] = useState('')
+	const getItems = useRequest(queryResume)
+	const editResume = useRequest(mutateResume)
+	// console.log(getItems, editResume)
 	// eslint-disable-next-line no-nested-ternary
-	const resume = getItems.data != null ? getItems.data.resume : editResume.data != null ? editResume.data.resume : null;
-	const [items, setItems] = useState([]);
-	const [isValidInput, setIsValidInput] = useState(true);
-	const [professionalRoles, setProfessionalRoles] = useState({});
-	const [areas, setAreas] = useState({});
-	const [viewState, setViewState] = useState(0);
+	const resume = getItems.data != null ? getItems.data.resume : editResume.data != null ? editResume.data.resume : null
+	const [items, setItems] = useState([])
+	const [isValidInput, setIsValidInput] = useState(true)
+	const [professionalRoles, setProfessionalRoles] = useState({})
+	const [areas, setAreas] = useState({})
+	const [viewState, setViewState] = useState(0)
 	if (resume && !isEmpty(resume)) {
-		loaderCouner += 1;
+		loaderCouner += 1
 	}
 
 	React.useEffect(() => {
 		if (editResume.data) {
-			setItems(editResume.data.items);
+			setItems(editResume.data.items)
 		}
-	}, [editResume.data]);
+	}, [editResume.data])
 	React.useEffect(() => {
 		if (getItems.data) {
-			setItems(getItems.data.items);
+			setItems(getItems.data.items)
 		}
-	}, [getItems.data]);
+	}, [getItems.data])
 
 	const handleChangeView = () => {
 		setViewState((current) => {
 			if (current === 2) {
-				return 0;
+				return 0
 			}
-			return current + 1;
-		});
-	};
+			return current + 1
+		})
+	}
 
 	React.useEffect(() => {
 		// eslint-disable-next-line no-unused-vars
-		const typed = new Typed('.secondWord', welcomeOptions);
+		const typed = new Typed('.secondWord', welcomeOptions)
 
-		fetch(`https://api.hh.ru/professional_roles`)
-			.then((response) => response.json())
-			.then((json) => setProfessionalRoles(json.categories));
-		fetch(`https://api.hh.ru/areas/113`)
+		fetch(`http://127.0.0.1:5001/items/rolesandareas`)
 			.then((response) => response.json())
 			.then((json) => {
+				setProfessionalRoles(json.categories)
 				setAreas(
 					json.areas.reduce((acc, area) => {
 						if (area.id === '1' || area.id === '2') {
-							return [...acc, { value: area.id, label: area.name }];
+							return [...acc, { value: area.id, label: area.name }]
 						}
-						return [...acc, ...area.areas.map((zone) => ({ value: zone.id, label: zone.name }))];
+						return [...acc, ...area.areas.map((zone) => ({ value: zone.id, label: zone.name }))]
 					}, [])
-				);
-			});
-	}, []);
+				)
+			})
+	}, [])
 
 	const handleSetView = (lastResume, valueForEdit) => {
-		setViewState(0);
-		return editResume.callRequest(lastResume, valueForEdit);
-	};
+		setViewState(0)
+		return editResume.callRequest(lastResume, valueForEdit)
+	}
 
-	const [welcomeShow, setWelcomeShow] = useState(true);
+	const [welcomeShow, setWelcomeShow] = useState(true)
 	const handleDeleteWelcome = () => {
-		setWelcomeShow(false);
-	};
+		setWelcomeShow(false)
+	}
 
 	const handleSubmit = (event) => {
-		event.preventDefault();
-		exeptionCouner += 1;
+		event.preventDefault()
+		exeptionCouner += 1
 		if (input.trim().length > 0) {
-			getItems.callRequest(input);
-			setIsValidInput(true);
+			getItems.callRequest(input)
+			setIsValidInput(true)
 		} else {
-			setIsValidInput(false);
+			setIsValidInput(false)
 		}
-	};
-	const [showSearch, setShowSearch] = useState('notShowSearch');
-	const handleChangeShowSearch = () => setShowSearch((current) => (current === 'showSearch' ? 'notShowSearch' : 'showSearch'));
+	}
+	const [showSearch, setShowSearch] = useState('notShowSearch')
+	const handleChangeShowSearch = () => setShowSearch((current) => (current === 'showSearch' ? 'notShowSearch' : 'showSearch'))
 
-	const [welcomeBtnClass, setWelcomeBtnBlinking] = React.useState('welcomeBtn');
+	const [welcomeBtnClass, setWelcomeBtnBlinking] = React.useState('welcomeBtn')
 
 	React.useEffect(() => {
-		setTimeout(() => setWelcomeBtnBlinking('welcomeBtn welcomeBtnBlinking'), 13000);
-	}, []);
-
+		setTimeout(() => setWelcomeBtnBlinking('welcomeBtn welcomeBtnBlinking'), 13000)
+	}, [])
+	// console.log(editResume)
 	return (
 		<div className='App'>
 			<div className={welcomeShow ? 'welcome' : 'welcome welcomeAway'} onClick={handleDeleteWelcome}>
@@ -190,7 +194,7 @@ function App() {
 											autoComplete='off'
 											value={input}
 											onInput={(e) => {
-												setInput(e.target.value);
+												setInput(e.target.value)
 											}}
 										/>
 									</div>
@@ -237,6 +241,12 @@ function App() {
 												<h1>Подходящих вакансий не найдено</h1>
 											</div>
 										)}
+										{/* {(!editResume.loading && !editResume.data) ||
+											(editResume.data && isEmpty(editResume.data.items) && (
+												<div className='centered'>
+													<h1>Подходящих вакансий не найдено</h1>
+												</div>
+											))} */}
 									</div>
 								</div>
 							</div>
@@ -251,7 +261,7 @@ function App() {
 				</div>
 			)}
 		</div>
-	);
+	)
 }
 
-export default App;
+export default App

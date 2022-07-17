@@ -130,16 +130,6 @@
 	position: relative;
 	animation: animation 0.1s ease-in;
 }
-@keyframes animation {
-	0% {
-		opacity: 0;
-		transform: scale(0.95);
-	}
-	100% {
-		opacity: 1;
-		transform: scale(1);
-	}
-}
 
 .footer {
 	position: fixed;
@@ -176,19 +166,6 @@
 	animation: showBlock 0.1s ease-in;
 }
 
-@keyframes showBlock {
-	0% {
-		opacity: 0;
-
-		transform: scale(0.95);
-	}
-	100% {
-		opacity: 1;
-
-		transform: scale(1);
-	}
-}
-
 #root > div > div:nth-child(2) > div.contentWrapper > div:nth-child(1) > div > div.sitebar.contentWidth > div > div > form > div.Resume_expSalContainer__1W8pN > div.Resume_experienceContainer__OEN54 {
 	margin-right: 100px;
 }
@@ -221,18 +198,6 @@
 	visibility: visible;
 	opacity: 1;
 	animation: blinking 1.2s infinite ease;
-}
-
-@keyframes blinking {
-	0% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0;
-	}
-	100% {
-		opacity: 1;
-	}
 }
 
 .welcome > h1,
@@ -314,6 +279,29 @@
 	justify-content: center;
 	align-items: center;
 }
+
+.previewMessage {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+.my-node-enter {
+	opacity: 0;
+}
+.my-node-enter-active {
+	opacity: 1;
+	transition: opacity 200ms;
+}
+.my-node-exit {
+	opacity: 1;
+}
+.my-node-exit-active {
+	opacity: 0;
+	transition: opacity 200ms;
+}
+
 @keyframes rotate {
 	0% {
 		transform: rotate(0deg);
@@ -346,24 +334,38 @@
 		background-position: 0 50%;
 	}
 }
-.previewMessage {
-	position: absolute;
-	top: 50%;
-	left: 50%;
-	transform: translate(-50%, -50%);
+
+@keyframes blinking {
+	0% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+@keyframes animation {
+	0% {
+		opacity: 0;
+		transform: scale(0.95);
+	}
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
 }
 
-.my-node-enter {
-	opacity: 0;
-}
-.my-node-enter-active {
-	opacity: 1;
-	transition: opacity 200ms;
-}
-.my-node-exit {
-	opacity: 1;
-}
-.my-node-exit-active {
-	opacity: 0;
-	transition: opacity 200ms;
+@keyframes showBlock {
+	0% {
+		opacity: 0;
+
+		transform: scale(0.95);
+	}
+	100% {
+		opacity: 1;
+
+		transform: scale(1);
+	}
 }
